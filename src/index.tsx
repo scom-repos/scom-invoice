@@ -193,6 +193,7 @@ export default class ScomInvoice extends Module {
     }
 
     private renderPaymentFormatIcons(format: PaymentFormatType) {
+        this.pnlFormat.clearInnerHTML();
         const icons = [];
         if (format !== 'lightning') {
             icons.push('link');

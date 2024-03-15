@@ -577,6 +577,7 @@ define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@sco
             return { format, amount: 12345, timestamp: Math.round(Date.now() / 1000), expiry: 119 };
         }
         renderPaymentFormatIcons(format) {
+            this.pnlFormat.clearInnerHTML();
             const icons = [];
             if (format !== 'lightning') {
                 icons.push('link');
