@@ -1,4 +1,6 @@
 export type sendBillCallback = (data: IInvoice) => void;
+export type modeType = 'create' | 'view';
+export type PaymentFormatType = 'unified' | 'lightning' | 'bitcoin';
 
 export enum Status {
     Unpaid = "UNPAID",
@@ -14,13 +16,18 @@ export interface IBillFrom {
 
 export interface IInvoice {
     billFrom?: IBillFrom;
-    billTo: string;
-    currency: string;
-    dueDate: number;
-    billNumber: number;
-    items: IItem[];
-    total: number;
+    billTo?: string;
+    currency?: string;
+    dueDate?: number;
+    billNumber?: number;
+    items?: IItem[];
+    total?: number;
     status?: Status;
+}
+
+export interface IInvoiceData extends IInvoice {
+    paymentAddress?: string;
+    mode?: modeType;
 }
 
 export interface IItem {

@@ -1,5 +1,4 @@
-import { Module, customModule, Container, VStack, application } from '@ijstech/components';
-import assets from '@modules/assets';
+import { Module, customModule, Container } from '@ijstech/components';
 import ScomInvoice, { IInvoice } from '@scom/scom-invoice';
 
 const billFrom = {
@@ -8,9 +7,12 @@ const billFrom = {
     npub: "npub1wtvapw3a4zr2vhdxuy4khwhzj9hj9cnllkynu8fsedrwxp22fg2qj5mjd8"
 }
 
+const paymentAddress = 'lnbc500u1pxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxjlwvf';
+
 @customModule
 export default class Module1 extends Module {
     private scomInvoice: ScomInvoice;
+    private scomInvoice2: ScomInvoice;
 
     constructor(parent?: Container, options?: any) {
         super(parent, options);
@@ -19,18 +21,35 @@ export default class Module1 extends Module {
     async init() {
         super.init();
         this.scomInvoice.billFrom = billFrom;
+        this.setData(this.scomInvoice2, { paymentAddress });
     }
     
-    viewInvoice(data: IInvoice) {
-        const builderTarget = this.scomInvoice.getConfigurators().find((conf: any) => conf.target === 'Builders');
+    setData(target: ScomInvoice, data: any) {
+        const builderTarget = target.getConfigurators().find((conf: any) => conf.target === 'Builders');
         builderTarget.setData(data);
+    }
+
+    viewInvoice(data: IInvoice) {
+        this.setData(this.scomInvoice, data);
     }
 
     render() {
         return (
-            <i-panel padding={{ top: '1.25rem', bottom: '1.25rem', left: '1.25rem', right: '1.25rem' }}>
-                <i-scom-invoice id="scomInvoice" onSendBill={this.viewInvoice}></i-scom-invoice>
-            </i-panel>
+            <i-hstack gap="1rem">
+                <i-panel
+                    padding={{ top: '1.25rem', bottom: '1.25rem', left: '1.25rem', right: '1.25rem' }}
+                    stack={{ grow: "1", shrink: "1", basis: "0" }}
+                >
+                    <i-scom-invoice id="scomInvoice" mode="create" onSendBill={this.viewInvoice}></i-scom-invoice>
+                </i-panel>
+                <i-panel
+                    padding={{ top: '1.25rem', bottom: '1.25rem', left: '1.25rem', right: '1.25rem' }}
+                    margin={{ top: 'auto', bottom: 'auto' }}
+                    stack={{ grow: "1", shrink: "1", basis: "0" }}
+                >
+                    <i-scom-invoice id="scomInvoice2"></i-scom-invoice>
+                </i-panel>
+            </i-hstack>
         )
     }
 }

@@ -1,6 +1,8 @@
 /// <amd-module name="@scom/scom-invoice/interface.ts" />
 declare module "@scom/scom-invoice/interface.ts" {
     export type sendBillCallback = (data: IInvoice) => void;
+    export type modeType = 'create' | 'view';
+    export type PaymentFormatType = 'unified' | 'lightning' | 'bitcoin';
     export enum Status {
         Unpaid = "UNPAID",
         Paid = "PAID"
@@ -13,13 +15,17 @@ declare module "@scom/scom-invoice/interface.ts" {
     }
     export interface IInvoice {
         billFrom?: IBillFrom;
-        billTo: string;
-        currency: string;
-        dueDate: number;
-        billNumber: number;
-        items: IItem[];
-        total: number;
+        billTo?: string;
+        currency?: string;
+        dueDate?: number;
+        billNumber?: number;
+        items?: IItem[];
+        total?: number;
         status?: Status;
+    }
+    export interface IInvoiceData extends IInvoice {
+        paymentAddress?: string;
+        mode?: modeType;
     }
     export interface IItem {
         name: string;
@@ -37,6 +43,7 @@ declare module "@scom/scom-invoice/index.css.ts" {
     export const formStyle: string;
     export const imageStyle: string;
     export const tableStyle: string;
+    export const invoiceCardStyle: string;
 }
 /// <amd-module name="@scom/scom-invoice/form.tsx" />
 declare module "@scom/scom-invoice/form.tsx" {
@@ -79,6 +86,44 @@ declare module "@scom/scom-invoice/assets.ts" {
     };
     export default _default;
 }
+/// <amd-module name="@scom/scom-invoice/detail.tsx" />
+declare module "@scom/scom-invoice/detail.tsx" {
+    import { ControlElement, Module } from '@ijstech/components';
+    import { IInvoice } from "@scom/scom-invoice/interface.ts";
+    type payInvoiceType = (data: IInvoice) => void;
+    interface ScomInvoiceDetailElement extends ControlElement {
+        onPayInvoice?: payInvoiceType;
+    }
+    global {
+        namespace JSX {
+            interface IntrinsicElements {
+                ['i-scom-invoice-detail']: ScomInvoiceDetailElement;
+            }
+        }
+    }
+    export class ScomInvoiceDetail extends Module {
+        private imgAvatar;
+        private lblUserName;
+        private lblInternetIdentifier;
+        private lblUserPubKey;
+        private lblInvoiceNumber;
+        private lblBilledTo;
+        private lblStatus;
+        private lblDueDate;
+        private itemTable;
+        private lblTotal;
+        private pnlButtons;
+        private itemColumns;
+        private columns;
+        private data;
+        onPayInvoice: payInvoiceType;
+        setData(data: IInvoice): void;
+        private getStatusColors;
+        private updateUI;
+        private handlePayInvoiceButtonClick;
+        render(): any;
+    }
+}
 /// <amd-module name="@scom/scom-invoice/payment.tsx" />
 declare module "@scom/scom-invoice/payment.tsx" {
     import { ControlElement, Module } from '@ijstech/components';
@@ -105,10 +150,11 @@ declare module "@scom/scom-invoice/payment.tsx" {
 /// <amd-module name="@scom/scom-invoice" />
 declare module "@scom/scom-invoice" {
     import { ControlElement, Module } from '@ijstech/components';
-    import { IBillFrom, sendBillCallback } from "@scom/scom-invoice/interface.ts";
-    export { IInvoice } from "@scom/scom-invoice/interface.ts";
+    import { IBillFrom, modeType, sendBillCallback } from "@scom/scom-invoice/interface.ts";
+    export { IInvoice, IInvoiceData } from "@scom/scom-invoice/interface.ts";
     interface ScomInvoiceElement extends ControlElement {
         onSendBill?: sendBillCallback;
+        mode?: modeType;
     }
     global {
         namespace JSX {
@@ -120,25 +166,22 @@ declare module "@scom/scom-invoice" {
     export default class ScomInvoice extends Module {
         private invoiceForm;
         private invoicePayment;
+        private invoiceDetail;
         private pnlInvoice;
-        private imgAvatar;
-        private lblUserName;
-        private lblInternetIdentifier;
-        private lblUserPubKey;
-        private lblInvoiceNumber;
-        private lblBilledTo;
-        private lblStatus;
-        private lblDueDate;
-        private itemTable;
-        private lblTotal;
-        private pnlButtons;
-        private itemColumns;
-        private columns;
+        private lblPaymentFormat;
+        private pnlFormat;
+        private lblInvoiceAmount;
+        private lblCurrency;
+        private lblDescription;
+        private btnPay;
         private _billFrom;
         private _data;
+        private mode;
+        private expiryInterval;
         onSendBill: sendBillCallback;
         get billFrom(): IBillFrom;
         set billFrom(value: IBillFrom);
+        init(): void;
         private setData;
         private getData;
         getConfigurators(): {
@@ -157,8 +200,12 @@ declare module "@scom/scom-invoice" {
         private updateStyle;
         private updateTheme;
         private handleSendBill;
-        private getStatusColors;
-        private viewInvoice;
+        private viewInvoiceDetail;
+        private showInvoicePayment;
+        private extractPaymentAddress;
+        private renderPaymentFormatIcons;
+        private updateInvoiceStatus;
+        private viewInvoiceByPaymentAddress;
         private payInvoice;
         render(): any;
     }

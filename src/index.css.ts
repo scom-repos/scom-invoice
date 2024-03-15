@@ -55,3 +55,13 @@ export const tableStyle = Styles.style({
         }
     }
 });
+
+export const invoiceCardStyle = Styles.style({
+    background: 'linear-gradient(40deg, #1d1d1d 50%, rgb(100 69 22 / 62%), #1d1d1d)',
+    $nest: {
+        '&.disabled': {
+            opacity: 0.7,
+            background: 'linear-gradient(40deg, #1d1d1d 50%, #383838, #1d1d1d)',
+        }
+    }
+})
