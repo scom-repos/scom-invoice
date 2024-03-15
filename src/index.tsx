@@ -181,7 +181,7 @@ export default class ScomInvoice extends Module {
 
     private extractPaymentAddress(address: string) {
         let format: PaymentFormatType;
-        if (address.startsWith('lnbc')) {
+        if (/^(lnbc|lntb|lnbcrt|lnsb|lntbs)([0-9]+(m|u|n|p))?1\S+/gm.test(address)) {
             format = 'lightning';
         } else if (address.startsWith('bc1')) {
             format = 'bitcoin';
