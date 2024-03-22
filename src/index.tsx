@@ -19,9 +19,11 @@ export { IInvoice, IInvoiceData } from './interface';
 const Theme = Styles.Theme.ThemeVars;
 
 type InvoiceStatus = 'expired' | 'paid' | 'unpaid';
+type payInvoiceCallback = (paymentAddress: string) => Promise<void>;
 
 interface ScomInvoiceElement extends ControlElement {
     onSendBill?: sendBillCallback;
+    onPayInvoice?: payInvoiceCallback;
     mode?: modeType;
 }
 
@@ -50,6 +52,7 @@ export default class ScomInvoice extends Module {
     private mode: modeType = 'view';
     private expiryInterval: any;
     public onSendBill: sendBillCallback;
+    public onPayInvoice: payInvoiceCallback;
 
     get billFrom() {
         return this._billFrom;
@@ -257,14 +260,24 @@ export default class ScomInvoice extends Module {
         this.pnlInvoice.visible = true;
     }
     
-    private payInvoice() {
+    private async payInvoice() {
         const data = this.btnPay.tag;
         if (data.status !== 'unpaid') return;
         if (this.expiryInterval) clearInterval(this.expiryInterval);
         let expiryDate = new Date((data.timestamp + data.expiry) * 1000);
-        let status: InvoiceStatus = Date.now() >= expiryDate.getTime() ? 'expired' : 'paid';
-        this.updateInvoiceStatus(status);
-        this.btnPay.tag = { ...data, status };
+        let status: InvoiceStatus;
+        if (Date.now() >= expiryDate.getTime()) {
+            status = 'expired';
+            this.updateInvoiceStatus(status);
+            this.btnPay.tag = { ...data, status };
+        } else {
+            status = 'paid';
+            if (this.onPayInvoice) {
+                await this.onPayInvoice(this._data.paymentAddress);
+            }
+            this.updateInvoiceStatus(status);
+            this.btnPay.tag = { ...data, status };
+        }
     }
 
     render() {

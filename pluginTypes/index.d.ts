@@ -152,8 +152,10 @@ declare module "@scom/scom-invoice" {
     import { ControlElement, Module } from '@ijstech/components';
     import { IBillFrom, modeType, sendBillCallback } from "@scom/scom-invoice/interface.ts";
     export { IInvoice, IInvoiceData } from "@scom/scom-invoice/interface.ts";
+    type payInvoiceCallback = (paymentAddress: string) => Promise<void>;
     interface ScomInvoiceElement extends ControlElement {
         onSendBill?: sendBillCallback;
+        onPayInvoice?: payInvoiceCallback;
         mode?: modeType;
     }
     global {
@@ -179,6 +181,7 @@ declare module "@scom/scom-invoice" {
         private mode;
         private expiryInterval;
         onSendBill: sendBillCallback;
+        onPayInvoice: payInvoiceCallback;
         get billFrom(): IBillFrom;
         set billFrom(value: IBillFrom);
         init(): void;

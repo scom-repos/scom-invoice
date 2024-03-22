@@ -640,16 +640,27 @@ define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@sco
             this.btnPay.tag = { ...data, status };
             this.pnlInvoice.visible = true;
         }
-        payInvoice() {
+        async payInvoice() {
             const data = this.btnPay.tag;
             if (data.status !== 'unpaid')
                 return;
             if (this.expiryInterval)
                 clearInterval(this.expiryInterval);
             let expiryDate = new Date((data.timestamp + data.expiry) * 1000);
-            let status = Date.now() >= expiryDate.getTime() ? 'expired' : 'paid';
-            this.updateInvoiceStatus(status);
-            this.btnPay.tag = { ...data, status };
+            let status;
+            if (Date.now() >= expiryDate.getTime()) {
+                status = 'expired';
+                this.updateInvoiceStatus(status);
+                this.btnPay.tag = { ...data, status };
+            }
+            else {
+                status = 'paid';
+                if (this.onPayInvoice) {
+                    await this.onPayInvoice(this._data.paymentAddress);
+                }
+                this.updateInvoiceStatus(status);
+                this.btnPay.tag = { ...data, status };
+            }
         }
         render() {
             return (this.$render("i-panel", { width: "100%", height: "100%" },
