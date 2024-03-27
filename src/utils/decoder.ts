@@ -1,5 +1,36 @@
 import { bech32 } from './bech32';
 
+function convert(
+    data: ArrayLike<number>,
+    inBits: number,
+    outBits: number
+): number[] {
+    let value = 0;
+    let bits = 0;
+    const maxV = (1 << outBits) - 1;
+
+    const result: number[] = [];
+    for (let i = 0; i < data.length; ++i) {
+        value = (value << inBits) | data[i];
+        bits += inBits;
+
+        while (bits >= outBits) {
+            bits -= outBits;
+            result.push((value >> bits) & maxV);
+        }
+    }
+
+    if (bits > 0) {
+        result.push((value << (outBits - bits)) & maxV);
+    }
+
+    return result;
+}
+
+function _5BitArrayTo8BitArray(words: number[]) {
+    return convert(words, 5, 8);
+}
+
 function toHexString(byteArray) {
     return Array.from(byteArray, function (byte: number) {
         return ('0' + (byte & 0xFF).toString(16)).slice(-2);
@@ -73,7 +104,7 @@ function decodeHumanReadablePart(prefix: string) {
 
 function routingInfoParser(words: number[]) {
     let routes: any[] = [];
-    let routesData = bech32.fromWords(words);
+    let routesData = _5BitArrayTo8BitArray(words);
     while (routesData.length > 0) {
         let pubkey = routesData.slice(0, 33);
         let shortChannelId = routesData.slice(33, 41);
@@ -99,28 +130,28 @@ function decodeTag(type: number, length: number, data: number[]) {
             if (length !== 52) break;
             return {
                 name: 'payment_hash',
-                value: toHexString(bech32.fromWords(data))
+                value: toHexString(_5BitArrayTo8BitArray(data))
             };
         case 16:
             if (length !== 52) break;
             return {
                 name: 'payment_secret',
-                value: toHexString(bech32.fromWords(data))
+                value: toHexString(_5BitArrayTo8BitArray(data))
             };
         case 13:
             return {
                 name: 'description',
-                value: toUTF8String(bech32.fromWords(data))
+                value: toUTF8String(_5BitArrayTo8BitArray(data))
             }
         case 19:
             return {
                 name: 'payee_node_key',
-                value: toHexString(bech32.fromWords(data))
+                value: toHexString(_5BitArrayTo8BitArray(data))
             };
         case 23:
             return {
                 name: 'purpose_commit_hash',
-                value: toHexString(bech32.fromWords(data))
+                value: toHexString(_5BitArrayTo8BitArray(data))
             };
         case 6:
             return {
@@ -176,7 +207,7 @@ export function decode(invoice: string) {
     const { coinType, satoshis, millisatoshis } = decodeHumanReadablePart(prefix);
 
     let sigWords = words.slice(-104);
-    let sigData = bech32.fromWords(sigWords);
+    let sigData = _5BitArrayTo8BitArray(sigWords);
     const recoveryFlag = sigData.pop() as number;
     const signature = toHexString(sigData);
     if (![0, 1, 2, 3].includes(recoveryFlag) || sigData.length !== 64) {
@@ -190,7 +221,7 @@ export function decode(invoice: string) {
     for (let i = 0; i < prefix.length; i++) {
         signingData += prefix.charCodeAt(i).toString(16);
     }
-    signingData += toHexString(bech32.fromWords(words.slice(0, -104)));
+    signingData += toHexString(_5BitArrayTo8BitArray(words.slice(0, -104)));
 
     return {
         coinType,

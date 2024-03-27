@@ -620,6 +620,27 @@ define("@scom/scom-invoice/utils/decoder.ts", ["require", "exports", "@scom/scom
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     exports.decode = void 0;
+    function convert(data, inBits, outBits) {
+        let value = 0;
+        let bits = 0;
+        const maxV = (1 << outBits) - 1;
+        const result = [];
+        for (let i = 0; i < data.length; ++i) {
+            value = (value << inBits) | data[i];
+            bits += inBits;
+            while (bits >= outBits) {
+                bits -= outBits;
+                result.push((value >> bits) & maxV);
+            }
+        }
+        if (bits > 0) {
+            result.push((value << (outBits - bits)) & maxV);
+        }
+        return result;
+    }
+    function _5BitArrayTo8BitArray(words) {
+        return convert(words, 5, 8);
+    }
     function toHexString(byteArray) {
         return Array.from(byteArray, function (byte) {
             return ('0' + (byte & 0xFF).toString(16)).slice(-2);
@@ -689,7 +710,7 @@ define("@scom/scom-invoice/utils/decoder.ts", ["require", "exports", "@scom/scom
     }
     function routingInfoParser(words) {
         let routes = [];
-        let routesData = bech32_1.bech32.fromWords(words);
+        let routesData = _5BitArrayTo8BitArray(words);
         while (routesData.length > 0) {
             let pubkey = routesData.slice(0, 33);
             let shortChannelId = routesData.slice(33, 41);
@@ -714,29 +735,29 @@ define("@scom/scom-invoice/utils/decoder.ts", ["require", "exports", "@scom/scom
                     break;
                 return {
                     name: 'payment_hash',
-                    value: toHexString(bech32_1.bech32.fromWords(data))
+                    value: toHexString(_5BitArrayTo8BitArray(data))
                 };
             case 16:
                 if (length !== 52)
                     break;
                 return {
                     name: 'payment_secret',
-                    value: toHexString(bech32_1.bech32.fromWords(data))
+                    value: toHexString(_5BitArrayTo8BitArray(data))
                 };
             case 13:
                 return {
                     name: 'description',
-                    value: toUTF8String(bech32_1.bech32.fromWords(data))
+                    value: toUTF8String(_5BitArrayTo8BitArray(data))
                 };
             case 19:
                 return {
                     name: 'payee_node_key',
-                    value: toHexString(bech32_1.bech32.fromWords(data))
+                    value: toHexString(_5BitArrayTo8BitArray(data))
                 };
             case 23:
                 return {
                     name: 'purpose_commit_hash',
-                    value: toHexString(bech32_1.bech32.fromWords(data))
+                    value: toHexString(_5BitArrayTo8BitArray(data))
                 };
             case 6:
                 return {
@@ -790,7 +811,7 @@ define("@scom/scom-invoice/utils/decoder.ts", ["require", "exports", "@scom/scom
         const { prefix, words } = bech32_1.bech32.decode(request, Number.MAX_SAFE_INTEGER);
         const { coinType, satoshis, millisatoshis } = decodeHumanReadablePart(prefix);
         let sigWords = words.slice(-104);
-        let sigData = bech32_1.bech32.fromWords(sigWords);
+        let sigData = _5BitArrayTo8BitArray(sigWords);
         const recoveryFlag = sigData.pop();
         const signature = toHexString(sigData);
         if (![0, 1, 2, 3].includes(recoveryFlag) || sigData.length !== 64) {
@@ -802,7 +823,7 @@ define("@scom/scom-invoice/utils/decoder.ts", ["require", "exports", "@scom/scom
         for (let i = 0; i < prefix.length; i++) {
             signingData += prefix.charCodeAt(i).toString(16);
         }
-        signingData += toHexString(bech32_1.bech32.fromWords(words.slice(0, -104)));
+        signingData += toHexString(_5BitArrayTo8BitArray(words.slice(0, -104)));
         return {
             coinType,
             satoshis,
