@@ -60,7 +60,7 @@ function decodeHumanReadablePart(prefix: string) {
     const coinType = match[1];
     const amount = match[2];
     const multiplier = match[3];
-    if (amount == null && multiplier == null) {
+    if (!amount && !multiplier) {
         return { coinType };
     }
     const { satoshis, millisatoshis } = decodeAmount(amount, multiplier);
