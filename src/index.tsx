@@ -14,7 +14,8 @@ import { ScomInvoiceForm } from './form';
 import { ScomInvoiceDetail } from './detail';
 import { ScomInvoicePayment } from './payment';
 import { invoiceCardStyle } from './index.css';
-export { IInvoice, IInvoiceData } from './interface';
+import { decodeInvoice } from './utils';
+export { decodeInvoice, IInvoice, IInvoiceData };
 
 const Theme = Styles.Theme.ThemeVars;
 
@@ -186,13 +187,22 @@ export default class ScomInvoice extends Module {
         let format: PaymentFormatType;
         if (/^(lnbc|lntb|lnbcrt|lnsb|lntbs)([0-9]+(m|u|n|p))?1\S+/gm.test(address)) {
             format = 'lightning';
+            const data = decodeInvoice(address);
+            const expiry = data.tags?.find(tag => tag.name === 'expire_time')?.value;
+            const description = data.tags?.find(tag => tag.name === 'description')?.value;
+            return { ...data, format, expiry, description };
         } else if (address.startsWith('bc1')) {
             format = 'bitcoin';
         } else {
             format = 'unified'
         }
-        // TODO
-        return { format, amount: 12345, timestamp: Math.round(Date.now() / 1000), expiry: 119 };
+        return {
+            format,
+            satoshis: 12345,
+            timestamp: Math.round(Date.now() / 1000),
+            expiry: 119,
+            description: 'sats for test@scom.com'
+        };
     }
 
     private renderPaymentFormatIcons(format: PaymentFormatType) {
@@ -238,9 +248,9 @@ export default class ScomInvoice extends Module {
         const data = this.extractPaymentAddress(address);
         this.lblPaymentFormat.caption = data.format === 'lightning' ? 'Lightning Invoice' : data.format === 'bitcoin' ? 'On-chain' : 'Unified';
         this.renderPaymentFormatIcons(data.format);
-        this.lblInvoiceAmount.caption = FormatUtils.formatNumber(data.amount, { decimalFigures: 2 });
+        this.lblInvoiceAmount.caption = FormatUtils.formatNumber(data.satoshis, { decimalFigures: 0 });
         this.lblCurrency.caption = 'Sats';
-        this.lblDescription.caption = 'sats for test@scom.com';
+        this.lblDescription.caption = data.description || '';
         let expiryDate = new Date((data.timestamp + data.expiry) * 1000);
         let status: InvoiceStatus = 'unpaid';
         if (Date.now() < expiryDate.getTime()) {
@@ -302,7 +312,7 @@ export default class ScomInvoice extends Module {
                         <i-label id="lblInvoiceAmount" font={{ size: '2.25rem' }}></i-label>
                         <i-label id="lblCurrency" font={{ size: '1.25rem', transform: 'capitalize' }} ></i-label>
                     </i-hstack>
-                    <i-label id="lblDescription" font={{ size: '1rem' }}></i-label>
+                    <i-label id="lblDescription" font={{ size: '1rem' }} lineHeight="1.25rem" lineClamp={2}></i-label>
                     <i-button
                         id="btnPay"
                         caption="Pay"

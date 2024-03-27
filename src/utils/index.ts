@@ -1,0 +1,1 @@
+export { decode as decodeInvoice } from './decoder';

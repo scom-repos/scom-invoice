@@ -437,9 +437,395 @@ define("@scom/scom-invoice/payment.tsx", ["require", "exports", "@ijstech/compon
     ], ScomInvoicePayment);
     exports.ScomInvoicePayment = ScomInvoicePayment;
 });
-define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@scom/scom-invoice/index.css.ts"], function (require, exports, components_6, index_css_3) {
+///<amd-module name='@scom/scom-invoice/utils/bech32.ts'/> 
+/*---------------------------------------------------------------------------------------------
+  *  Copyright (c) 2017 Pieter Wuille
+  *  Copyright (c) 2018 bitcoinjs contributors
+  *  Licensed under the MIT License.
+  *  https://github.com/bitcoinjs/bech32/blob/8307501d91ac0cd7d93d55a0aefbe415148cdbbe/LICENSE
+  *--------------------------------------------------------------------------------------------*/
+define("@scom/scom-invoice/utils/bech32.ts", ["require", "exports"], function (require, exports) {
+    'use strict';
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.bech32m = exports.bech32 = void 0;
+    const ALPHABET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
+    const ALPHABET_MAP = {};
+    for (let z = 0; z < ALPHABET.length; z++) {
+        const x = ALPHABET.charAt(z);
+        ALPHABET_MAP[x] = z;
+    }
+    function polymodStep(pre) {
+        const b = pre >> 25;
+        return (((pre & 0x1ffffff) << 5) ^
+            (-((b >> 0) & 1) & 0x3b6a57b2) ^
+            (-((b >> 1) & 1) & 0x26508e6d) ^
+            (-((b >> 2) & 1) & 0x1ea119fa) ^
+            (-((b >> 3) & 1) & 0x3d4233dd) ^
+            (-((b >> 4) & 1) & 0x2a1462b3));
+    }
+    function prefixChk(prefix) {
+        let chk = 1;
+        for (let i = 0; i < prefix.length; ++i) {
+            const c = prefix.charCodeAt(i);
+            if (c < 33 || c > 126)
+                return 'Invalid prefix (' + prefix + ')';
+            chk = polymodStep(chk) ^ (c >> 5);
+        }
+        chk = polymodStep(chk);
+        for (let i = 0; i < prefix.length; ++i) {
+            const v = prefix.charCodeAt(i);
+            chk = polymodStep(chk) ^ (v & 0x1f);
+        }
+        return chk;
+    }
+    function convert(data, inBits, outBits, pad) {
+        let value = 0;
+        let bits = 0;
+        const maxV = (1 << outBits) - 1;
+        const result = [];
+        for (let i = 0; i < data.length; ++i) {
+            value = (value << inBits) | data[i];
+            bits += inBits;
+            while (bits >= outBits) {
+                bits -= outBits;
+                result.push((value >> bits) & maxV);
+            }
+        }
+        if (pad) {
+            if (bits > 0) {
+                result.push((value << (outBits - bits)) & maxV);
+            }
+        }
+        else {
+            if (bits >= inBits)
+                return 'Excess padding';
+            if ((value << (outBits - bits)) & maxV)
+                return 'Non-zero padding';
+        }
+        return result;
+    }
+    function toWords(bytes) {
+        return convert(bytes, 8, 5, true);
+    }
+    function fromWordsUnsafe(words) {
+        const res = convert(words, 5, 8, false);
+        if (Array.isArray(res))
+            return res;
+    }
+    function fromWords(words) {
+        const res = convert(words, 5, 8, false);
+        if (Array.isArray(res))
+            return res;
+        throw new Error(res);
+    }
+    function getLibraryFromEncoding(encoding) {
+        let ENCODING_CONST;
+        if (encoding === 'bech32') {
+            ENCODING_CONST = 1;
+        }
+        else {
+            ENCODING_CONST = 0x2bc830a3;
+        }
+        function encode(prefix, words, LIMIT) {
+            LIMIT = LIMIT || 90;
+            if (prefix.length + 7 + words.length > LIMIT)
+                throw new TypeError('Exceeds length limit');
+            prefix = prefix.toLowerCase();
+            // determine chk mod
+            let chk = prefixChk(prefix);
+            if (typeof chk === 'string')
+                throw new Error(chk);
+            let result = prefix + '1';
+            for (let i = 0; i < words.length; ++i) {
+                const x = words[i];
+                if (x >> 5 !== 0)
+                    throw new Error('Non 5-bit word');
+                chk = polymodStep(chk) ^ x;
+                result += ALPHABET.charAt(x);
+            }
+            for (let i = 0; i < 6; ++i) {
+                chk = polymodStep(chk);
+            }
+            chk ^= ENCODING_CONST;
+            for (let i = 0; i < 6; ++i) {
+                const v = (chk >> ((5 - i) * 5)) & 0x1f;
+                result += ALPHABET.charAt(v);
+            }
+            return result;
+        }
+        function __decode(str, LIMIT) {
+            LIMIT = LIMIT || 90;
+            if (str.length < 8)
+                return str + ' too short';
+            if (str.length > LIMIT)
+                return 'Exceeds length limit';
+            // don't allow mixed case
+            const lowered = str.toLowerCase();
+            const uppered = str.toUpperCase();
+            if (str !== lowered && str !== uppered)
+                return 'Mixed-case string ' + str;
+            str = lowered;
+            const split = str.lastIndexOf('1');
+            if (split === -1)
+                return 'No separator character for ' + str;
+            if (split === 0)
+                return 'Missing prefix for ' + str;
+            const prefix = str.slice(0, split);
+            const wordChars = str.slice(split + 1);
+            if (wordChars.length < 6)
+                return 'Data too short';
+            let chk = prefixChk(prefix);
+            if (typeof chk === 'string')
+                return chk;
+            const words = [];
+            for (let i = 0; i < wordChars.length; ++i) {
+                const c = wordChars.charAt(i);
+                const v = ALPHABET_MAP[c];
+                if (v === undefined)
+                    return 'Unknown character ' + c;
+                chk = polymodStep(chk) ^ v;
+                // not in the checksum?
+                if (i + 6 >= wordChars.length)
+                    continue;
+                words.push(v);
+            }
+            if (chk !== ENCODING_CONST)
+                return 'Invalid checksum for ' + str;
+            return { prefix, words };
+        }
+        function decodeUnsafe(str, LIMIT) {
+            const res = __decode(str, LIMIT);
+            if (typeof res === 'object')
+                return res;
+        }
+        function decode(str, LIMIT) {
+            const res = __decode(str, LIMIT);
+            if (typeof res === 'object')
+                return res;
+            throw new Error(res);
+        }
+        return {
+            decodeUnsafe,
+            decode,
+            encode,
+            toWords,
+            fromWordsUnsafe,
+            fromWords,
+        };
+    }
+    exports.bech32 = getLibraryFromEncoding('bech32');
+    exports.bech32m = getLibraryFromEncoding('bech32m');
+});
+define("@scom/scom-invoice/utils/decoder.ts", ["require", "exports", "@scom/scom-invoice/utils/bech32.ts"], function (require, exports, bech32_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
+    exports.decode = void 0;
+    function toHexString(byteArray) {
+        return Array.from(byteArray, function (byte) {
+            return ('0' + (byte & 0xFF).toString(16)).slice(-2);
+        }).join('');
+    }
+    function toUTF8String(byteArray) {
+        let str = '';
+        for (let byte of byteArray) {
+            str += '%' + ('0' + byte.toString(16)).slice(-2);
+        }
+        return decodeURIComponent(str);
+    }
+    function wordsToInt(words) {
+        let sum = 0;
+        for (let i = 0; i < words.length; i++) {
+            sum = sum * 32 + words[i];
+        }
+        return sum;
+    }
+    function wordsToBinaryString(words) {
+        return Array.from(words, function (byte) {
+            return ('000000' + byte.toString(2)).slice(-5);
+        }).join('');
+    }
+    function decodeAmount(amount, multiplier) {
+        let _amount = Number(amount);
+        if (!Number.isInteger(_amount)) {
+            throw new Error('Invalid amount');
+        }
+        let satoshis, millisatoshis;
+        switch (multiplier) {
+            case 'm':
+                satoshis = _amount * 100000;
+                break;
+            case 'u':
+                satoshis = _amount * 100;
+                break;
+            case 'n':
+                satoshis = _amount * 0.1;
+                break;
+            case 'p':
+                satoshis = _amount * 0.0001;
+                break;
+            default:
+                throw new Error('Invalid multiplier');
+        }
+        if (satoshis != null)
+            millisatoshis = satoshis * 1000;
+        return { satoshis, millisatoshis };
+    }
+    function decodeHumanReadablePart(prefix) {
+        const match = /^ln(\S+?)(\d*)([munp]?)$/.exec(prefix);
+        if (!match)
+            throw new Error('Invalid prefix');
+        const coinType = match[1];
+        const amount = match[2];
+        const multiplier = match[3];
+        if (amount == null && multiplier == null) {
+            return { coinType };
+        }
+        const { satoshis, millisatoshis } = decodeAmount(amount, multiplier);
+        return {
+            coinType,
+            satoshis,
+            millisatoshis,
+        };
+    }
+    function routingInfoParser(words) {
+        let routes = [];
+        let routesData = bech32_1.bech32.fromWords(words);
+        while (routesData.length > 0) {
+            let pubkey = routesData.slice(0, 33);
+            let shortChannelId = routesData.slice(33, 41);
+            let feeBaseMsat = routesData.slice(41, 45);
+            let feeProportionalMillionths = routesData.slice(45, 49);
+            let cltvExpiryDelta = routesData.slice(49, 51);
+            routesData = routesData.slice(51);
+            routes.push({
+                pubkey: toHexString(pubkey),
+                short_channel_id: toHexString(shortChannelId),
+                fee_base_msat: parseInt(toHexString(feeBaseMsat), 16),
+                fee_proportional_millionths: parseInt(toHexString(feeProportionalMillionths), 16),
+                cltv_expiry_delta: parseInt(toHexString(cltvExpiryDelta), 16)
+            });
+        }
+        return routes;
+    }
+    function decodeTag(type, length, data) {
+        switch (type) {
+            case 1:
+                if (length !== 52)
+                    break;
+                return {
+                    name: 'payment_hash',
+                    value: toHexString(bech32_1.bech32.fromWords(data))
+                };
+            case 16:
+                if (length !== 52)
+                    break;
+                return {
+                    name: 'payment_secret',
+                    value: toHexString(bech32_1.bech32.fromWords(data))
+                };
+            case 13:
+                return {
+                    name: 'description',
+                    value: toUTF8String(bech32_1.bech32.fromWords(data))
+                };
+            case 19:
+                return {
+                    name: 'payee_node_key',
+                    value: toHexString(bech32_1.bech32.fromWords(data))
+                };
+            case 23:
+                return {
+                    name: 'purpose_commit_hash',
+                    value: toHexString(bech32_1.bech32.fromWords(data))
+                };
+            case 6:
+                return {
+                    name: 'expire_time',
+                    value: wordsToInt(data)
+                };
+            case 24:
+                return {
+                    name: 'min_final_cltv_expiry',
+                    value: wordsToInt(data)
+                };
+            case 9:
+                // TODO parse fallback address
+                return {
+                    name: 'fallback_address',
+                    value: {
+                        version: data[0],
+                        address: ''
+                    }
+                };
+            case 3:
+                const routes = routingInfoParser(data);
+                return {
+                    name: 'routing_info',
+                    value: routes
+                };
+            case 5:
+                return {
+                    name: 'feature_bits',
+                    value: wordsToBinaryString(data)
+                };
+        }
+    }
+    function decodeTags(words) {
+        let tags = [];
+        while (words.length > 0) {
+            let type = words[0];
+            let tagLength = wordsToInt(words.slice(1, 3));
+            let data = words.slice(3, tagLength + 3);
+            words = words.slice(tagLength + 3);
+            const tag = decodeTag(type, tagLength, data);
+            if (tag)
+                tags.push(tag);
+        }
+        return tags;
+    }
+    function decode(invoice) {
+        const request = invoice.trim().toLowerCase();
+        if (!request.startsWith('ln'))
+            throw new Error('Invalid lightning payment request');
+        const { prefix, words } = bech32_1.bech32.decode(request, Number.MAX_SAFE_INTEGER);
+        const { coinType, satoshis, millisatoshis } = decodeHumanReadablePart(prefix);
+        let sigWords = words.slice(-104);
+        let sigData = bech32_1.bech32.fromWords(sigWords);
+        const recoveryFlag = sigData.pop();
+        const signature = toHexString(sigData);
+        if (![0, 1, 2, 3].includes(recoveryFlag) || sigData.length !== 64) {
+            throw new Error('Invalid signature');
+        }
+        const timestamp = wordsToInt(words.slice(0, 7));
+        const tags = decodeTags(words.slice(7, -104));
+        let signingData = '';
+        for (let i = 0; i < prefix.length; i++) {
+            signingData += prefix.charCodeAt(i).toString(16);
+        }
+        signingData += toHexString(bech32_1.bech32.fromWords(words.slice(0, -104)));
+        return {
+            coinType,
+            satoshis,
+            millisatoshis,
+            signature,
+            timestamp,
+            tags,
+            signingData
+        };
+    }
+    exports.decode = decode;
+});
+define("@scom/scom-invoice/utils/index.ts", ["require", "exports", "@scom/scom-invoice/utils/decoder.ts"], function (require, exports, decoder_1) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.decodeInvoice = void 0;
+    Object.defineProperty(exports, "decodeInvoice", { enumerable: true, get: function () { return decoder_1.decode; } });
+});
+define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@scom/scom-invoice/index.css.ts", "@scom/scom-invoice/utils/index.ts"], function (require, exports, components_6, index_css_3, utils_1) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    exports.decodeInvoice = void 0;
+    Object.defineProperty(exports, "decodeInvoice", { enumerable: true, get: function () { return utils_1.decodeInvoice; } });
     const Theme = components_6.Styles.Theme.ThemeVars;
     let ScomInvoice = class ScomInvoice extends components_6.Module {
         constructor() {
@@ -566,6 +952,10 @@ define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@sco
             let format;
             if (/^(lnbc|lntb|lnbcrt|lnsb|lntbs)([0-9]+(m|u|n|p))?1\S+/gm.test(address)) {
                 format = 'lightning';
+                const data = (0, utils_1.decodeInvoice)(address);
+                const expiry = data.tags?.find(tag => tag.name === 'expire_time')?.value;
+                const description = data.tags?.find(tag => tag.name === 'description')?.value;
+                return { ...data, format, expiry, description };
             }
             else if (address.startsWith('bc1')) {
                 format = 'bitcoin';
@@ -573,8 +963,13 @@ define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@sco
             else {
                 format = 'unified';
             }
-            // TODO
-            return { format, amount: 12345, timestamp: Math.round(Date.now() / 1000), expiry: 119 };
+            return {
+                format,
+                satoshis: 12345,
+                timestamp: Math.round(Date.now() / 1000),
+                expiry: 119,
+                description: 'sats for test@scom.com'
+            };
         }
         renderPaymentFormatIcons(format) {
             this.pnlFormat.clearInnerHTML();
@@ -618,9 +1013,9 @@ define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@sco
             const data = this.extractPaymentAddress(address);
             this.lblPaymentFormat.caption = data.format === 'lightning' ? 'Lightning Invoice' : data.format === 'bitcoin' ? 'On-chain' : 'Unified';
             this.renderPaymentFormatIcons(data.format);
-            this.lblInvoiceAmount.caption = components_6.FormatUtils.formatNumber(data.amount, { decimalFigures: 2 });
+            this.lblInvoiceAmount.caption = components_6.FormatUtils.formatNumber(data.satoshis, { decimalFigures: 0 });
             this.lblCurrency.caption = 'Sats';
-            this.lblDescription.caption = 'sats for test@scom.com';
+            this.lblDescription.caption = data.description || '';
             let expiryDate = new Date((data.timestamp + data.expiry) * 1000);
             let status = 'unpaid';
             if (Date.now() < expiryDate.getTime()) {
@@ -674,7 +1069,7 @@ define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@sco
                     this.$render("i-hstack", { verticalAlignment: "end", margin: { top: '2.25rem', bottom: '1.25rem' }, lineHeight: "2.75rem", gap: "0.75rem" },
                         this.$render("i-label", { id: "lblInvoiceAmount", font: { size: '2.25rem' } }),
                         this.$render("i-label", { id: "lblCurrency", font: { size: '1.25rem', transform: 'capitalize' } })),
-                    this.$render("i-label", { id: "lblDescription", font: { size: '1rem' } }),
+                    this.$render("i-label", { id: "lblDescription", font: { size: '1rem' }, lineHeight: "1.25rem", lineClamp: 2 }),
                     this.$render("i-button", { id: "btnPay", caption: "Pay", width: "100%", border: { radius: '0.5rem' }, boxShadow: 'none', padding: { top: '0.75rem', bottom: '0.75rem' }, font: { size: '1.125rem', weight: 600 }, onClick: this.payInvoice }))));
         }
     };
