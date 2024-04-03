@@ -9,23 +9,20 @@ import {
     Styles,
     VStack,
 } from '@ijstech/components';
-import { IBillFrom, IInvoice, IInvoiceData, modeType, PaymentFormatType, sendBillCallback } from './interface';
-import { ScomInvoiceForm } from './form';
-import { ScomInvoiceDetail } from './detail';
-import { ScomInvoicePayment } from './payment';
+import { INetwork } from "@ijstech/eth-wallet";
+import getNetworkList from '@scom/scom-network-list';
+import { IInvoice, modeType, PaymentFormatType, sendBillCallback } from './interface';
 import { invoiceCardStyle } from './index.css';
 import { decodeInvoice } from './utils';
-export { decodeInvoice, IInvoice, IInvoiceData };
+export { decodeInvoice };
 
 const Theme = Styles.Theme.ThemeVars;
 
 type InvoiceStatus = 'expired' | 'paid' | 'unpaid';
-type payInvoiceCallback = (paymentAddress: string) => Promise<void>;
+type payInvoiceCallback = (paymentAddress: string) => Promise<boolean>;
 
 interface ScomInvoiceElement extends ControlElement {
-    onSendBill?: sendBillCallback;
     onPayInvoice?: payInvoiceCallback;
-    mode?: modeType;
 }
 
 declare global {
@@ -38,9 +35,6 @@ declare global {
 
 @customElements('i-scom-invoice')
 export default class ScomInvoice extends Module {
-    private invoiceForm: ScomInvoiceForm;
-    private invoicePayment: ScomInvoicePayment;
-    private invoiceDetail: ScomInvoiceDetail;
     private pnlInvoice: VStack;
     private lblPaymentFormat: Label;
     private pnlFormat: VStack;
@@ -48,41 +42,21 @@ export default class ScomInvoice extends Module {
     private lblCurrency: Label;
     private lblDescription: Label;
     private btnPay: Button;
-    private _billFrom: IBillFrom;
-    private _data: IInvoiceData;
-    private mode: modeType = 'view';
+    private _data: IInvoice;
     private expiryInterval: any;
-    public onSendBill: sendBillCallback;
+    private networkMap: Record<number, INetwork>;
     public onPayInvoice: payInvoiceCallback;
-
-    get billFrom() {
-        return this._billFrom;
-    }
-
-    set billFrom(value: IBillFrom) {
-        this._billFrom = value;
-    }
 
     init() {
         super.init();
-        const mode = this.getAttribute('mode', true);
-        this.setData({ mode });
     }
 
-    private async setData(value: IInvoiceData) {
+    private async setData(value: IInvoice) {
         this._data = value;
-        this.mode = value.mode || 'view';
-        if (this.mode === 'create') {
-            this.invoiceDetail.visible = false;
-            this.invoicePayment.visible = false;
-            this.pnlInvoice.visible = false;
-            this.invoiceForm.visible = true;
+        if (value.paymentAddress) {
+            this.viewInvoiceByPaymentAddress(value.paymentAddress);
         } else {
-            if (value.paymentAddress) {
-                this.viewInvoiceByPaymentAddress(value.paymentAddress);
-            } else if (value.billTo && value.dueDate) {
-                this.viewInvoiceDetail(this._data);
-            }
+            this.viewInvoiceDetail(this._data);
         }
     }
 
@@ -158,29 +132,36 @@ export default class ScomInvoice extends Module {
         this.updateStyle('--action-hover', this.tag[themeVar]?.hover);
     }
 
-    private handleSendBill(data: IInvoice) {
-        data.billFrom = this.billFrom;
-        if (this.onSendBill) this.onSendBill(data);
+    private getNetwork(chainId: number) {
+        if (!this.networkMap) {
+            const defaultNetworkList: INetwork[] = getNetworkList();
+            this.networkMap = defaultNetworkList.reduce((acc, cur) => {
+                acc[cur.chainId] = cur;
+                return acc;
+            }, {});
+        }
+        return this.networkMap[chainId];
     }
 
     private viewInvoiceDetail(data: IInvoice) {
-        this.invoiceForm.visible = false;
-        this.invoicePayment.visible = false;
         this.pnlInvoice.visible = false;
-        this.invoiceDetail.setData(data);
-        this.invoiceDetail.visible = true;
-    }
-
-    private showInvoicePayment(data: IInvoice) {
-        this.invoiceForm.visible = false;
-        this.invoiceDetail.visible = false;
-        this.pnlInvoice.visible = false;
-        this.invoicePayment.setData({
-            url: 'https://example.payment.com/i/MygmZUVXnIbs3UbSQJc7PG',
-            currency: data.currency,
-            total: data.total
-        });
-        this.invoicePayment.visible = true;
+        const network = this.getNetwork(data.chainId);
+        this.lblPaymentFormat.caption = network?.chainName || "";
+        this.pnlFormat.clearInnerHTML();
+        if (network.image) {
+            this.pnlFormat.appendChild(
+                <i-hstack horizontalAlignment="end" gap="0.25rem">
+                    <i-image width="1rem" height="1rem" url={network.image}></i-image>
+                </i-hstack>
+            )
+        }
+        this.lblInvoiceAmount.caption = FormatUtils.formatNumber(data.amount, { decimalFigures: 0 });
+        this.lblCurrency.caption = data.token.symbol;
+        this.lblDescription.caption = data.comment || '';
+        let status: InvoiceStatus = 'unpaid';
+        this.updateInvoiceStatus(status);
+        this.btnPay.tag = { ...data, status };
+        this.pnlInvoice.visible = true;
     }
 
     private extractPaymentAddress(address: string) {
@@ -191,18 +172,7 @@ export default class ScomInvoice extends Module {
             const expiry = data.tags?.find(tag => tag.name === 'expire_time')?.value;
             const description = data.tags?.find(tag => tag.name === 'description')?.value;
             return { ...data, format, expiry, description };
-        } else if (address.startsWith('bc1')) {
-            format = 'bitcoin';
-        } else {
-            format = 'unified'
         }
-        return {
-            format,
-            satoshis: 12345,
-            timestamp: Math.round(Date.now() / 1000),
-            expiry: 119,
-            description: 'sats for test@scom.com'
-        };
     }
 
     private renderPaymentFormatIcons(format: PaymentFormatType) {
@@ -218,7 +188,7 @@ export default class ScomInvoice extends Module {
         this.pnlFormat.appendChild(pnlIcons);
         for (const name of icons) {
             pnlIcons.appendChild(
-                <i-icon width="1rem" height="1rem" name={name}></i-icon>
+                <i-icon width="1.5rem" height="1.5rem" name={name}></i-icon>
             )
         }
     }
@@ -242,8 +212,6 @@ export default class ScomInvoice extends Module {
 
     private viewInvoiceByPaymentAddress(address: string) {
         if (this.expiryInterval) clearInterval(this.expiryInterval);
-        this.invoiceDetail.visible = false;
-        this.invoicePayment.visible = false;
         this.pnlInvoice.visible = false;
         const data = this.extractPaymentAddress(address);
         this.lblPaymentFormat.caption = data.format === 'lightning' ? 'Lightning Invoice' : data.format === 'bitcoin' ? 'On-chain' : 'Unified';
@@ -274,28 +242,28 @@ export default class ScomInvoice extends Module {
         const data = this.btnPay.tag;
         if (data.status !== 'unpaid') return;
         if (this.expiryInterval) clearInterval(this.expiryInterval);
-        let expiryDate = new Date((data.timestamp + data.expiry) * 1000);
         let status: InvoiceStatus;
-        if (Date.now() >= expiryDate.getTime()) {
-            status = 'expired';
-            this.updateInvoiceStatus(status);
-            this.btnPay.tag = { ...data, status };
-        } else {
-            status = 'paid';
-            if (this.onPayInvoice) {
-                await this.onPayInvoice(this._data.paymentAddress);
+        if (data.timestamp != null && data.expiry != null) {
+            let expiryDate = new Date((data.timestamp + data.expiry) * 1000);
+            if (Date.now() >= expiryDate.getTime()) {
+                status = 'expired';
+                this.updateInvoiceStatus(status);
+                this.btnPay.tag = { ...data, status };
+                return;
             }
-            this.updateInvoiceStatus(status);
-            this.btnPay.tag = { ...data, status };
         }
+        status = 'paid';
+        if (this.onPayInvoice) {
+            let success = await this.onPayInvoice(this._data.paymentAddress);
+            if (!success) status = 'unpaid';
+        }
+        this.updateInvoiceStatus(status);
+        this.btnPay.tag = { ...data, status };
     }
 
     render() {
         return (
             <i-panel width="100%" height="100%">
-                <i-scom-invoice-form id="invoiceForm" visible={false} onSendBill={this.handleSendBill}></i-scom-invoice-form>
-                <i-scom-invoice-detail id="invoiceDetail" visible={false} onPayInvoice={this.showInvoicePayment}></i-scom-invoice-detail>
-                <i-scom-invoice-payment id="invoicePayment" visible={false}></i-scom-invoice-payment>
                 <i-vstack
                     id="pnlInvoice"
                     class={invoiceCardStyle}

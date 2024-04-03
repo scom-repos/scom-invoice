@@ -3,6 +3,8 @@
     "type": "widget",
     "version": "0.1.0",
     "dependencies": [
-        "@ijstech/components"
+        "@ijstech/components",
+        "@ijstech/eth-wallet",
+        "@scom/scom-network-list"
     ]
 }
