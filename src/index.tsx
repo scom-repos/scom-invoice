@@ -151,7 +151,7 @@ export default class ScomInvoice extends Module {
         if (network.image) {
             this.pnlFormat.appendChild(
                 <i-hstack horizontalAlignment="end" gap="0.25rem">
-                    <i-image width="1rem" height="1rem" url={network.image}></i-image>
+                    <i-image width="1.5rem" height="1.5rem" url={network.image}></i-image>
                 </i-hstack>
             )
         }
@@ -188,7 +188,7 @@ export default class ScomInvoice extends Module {
         this.pnlFormat.appendChild(pnlIcons);
         for (const name of icons) {
             pnlIcons.appendChild(
-                <i-icon width="1.5rem" height="1.5rem" name={name}></i-icon>
+                <i-icon width="1rem" height="1rem" name={name}></i-icon>
             )
         }
     }

@@ -580,7 +580,7 @@ define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@sco
             this.pnlFormat.clearInnerHTML();
             if (network.image) {
                 this.pnlFormat.appendChild(this.$render("i-hstack", { horizontalAlignment: "end", gap: "0.25rem" },
-                    this.$render("i-image", { width: "1rem", height: "1rem", url: network.image })));
+                    this.$render("i-image", { width: "1.5rem", height: "1.5rem", url: network.image })));
             }
             this.lblInvoiceAmount.caption = components_2.FormatUtils.formatNumber(data.amount, { decimalFigures: 0 });
             this.lblCurrency.caption = data.token.symbol;
@@ -612,7 +612,7 @@ define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@sco
             const pnlIcons = (this.$render("i-hstack", { horizontalAlignment: "end", gap: "0.25rem" }));
             this.pnlFormat.appendChild(pnlIcons);
             for (const name of icons) {
-                pnlIcons.appendChild(this.$render("i-icon", { width: "1.5rem", height: "1.5rem", name: name }));
+                pnlIcons.appendChild(this.$render("i-icon", { width: "1rem", height: "1rem", name: name }));
             }
         }
         updateInvoiceStatus(status) {
