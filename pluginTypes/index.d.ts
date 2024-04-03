@@ -74,9 +74,10 @@ declare module "@scom/scom-invoice/utils/index.ts" {
 /// <amd-module name="@scom/scom-invoice" />
 declare module "@scom/scom-invoice" {
     import { ControlElement, Module } from '@ijstech/components';
+    import { IInvoice } from "@scom/scom-invoice/interface.ts";
     import { decodeInvoice } from "@scom/scom-invoice/utils/index.ts";
-    export { decodeInvoice };
-    type payInvoiceCallback = (paymentAddress: string) => Promise<boolean>;
+    export { decodeInvoice, IInvoice };
+    type payInvoiceCallback = (data: IInvoice) => Promise<boolean>;
     interface ScomInvoiceElement extends ControlElement {
         onPayInvoice?: payInvoiceCallback;
     }

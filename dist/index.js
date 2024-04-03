@@ -680,7 +680,7 @@ define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@sco
             }
             status = 'paid';
             if (this.onPayInvoice) {
-                let success = await this.onPayInvoice(this._data.paymentAddress);
+                let success = await this.onPayInvoice(this._data);
                 if (!success)
                     status = 'unpaid';
             }

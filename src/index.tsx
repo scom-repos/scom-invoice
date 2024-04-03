@@ -14,12 +14,12 @@ import getNetworkList from '@scom/scom-network-list';
 import { IInvoice, modeType, PaymentFormatType, sendBillCallback } from './interface';
 import { invoiceCardStyle } from './index.css';
 import { decodeInvoice } from './utils';
-export { decodeInvoice };
+export { decodeInvoice, IInvoice };
 
 const Theme = Styles.Theme.ThemeVars;
 
 type InvoiceStatus = 'expired' | 'paid' | 'unpaid';
-type payInvoiceCallback = (paymentAddress: string) => Promise<boolean>;
+type payInvoiceCallback = (data: IInvoice) => Promise<boolean>;
 
 interface ScomInvoiceElement extends ControlElement {
     onPayInvoice?: payInvoiceCallback;
@@ -254,7 +254,7 @@ export default class ScomInvoice extends Module {
         }
         status = 'paid';
         if (this.onPayInvoice) {
-            let success = await this.onPayInvoice(this._data.paymentAddress);
+            let success = await this.onPayInvoice(this._data);
             if (!success) status = 'unpaid';
         }
         this.updateInvoiceStatus(status);
