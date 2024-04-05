@@ -680,9 +680,13 @@ define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@sco
             }
             status = 'paid';
             if (this.onPayInvoice) {
+                this.btnPay.rightIcon.spin = true;
+                this.btnPay.rightIcon.visible = true;
                 let success = await this.onPayInvoice(this._data);
                 if (!success)
                     status = 'unpaid';
+                this.btnPay.rightIcon.spin = false;
+                this.btnPay.rightIcon.visible = false;
             }
             this.updateInvoiceStatus(status);
             this.btnPay.tag = { ...data, status };
