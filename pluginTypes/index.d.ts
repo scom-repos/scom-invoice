@@ -92,6 +92,7 @@ declare module "@scom/scom-invoice" {
         private pnlInvoice;
         private lblPaymentFormat;
         private pnlFormat;
+        private lblRecipient;
         private lblInvoiceAmount;
         private lblCurrency;
         private lblDescription;
@@ -99,6 +100,7 @@ declare module "@scom/scom-invoice" {
         private _data;
         private expiryInterval;
         private networkMap;
+        tag: any;
         onPayInvoice: payInvoiceCallback;
         init(): void;
         private setData;

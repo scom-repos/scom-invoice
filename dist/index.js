@@ -487,6 +487,13 @@ define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@sco
     Object.defineProperty(exports, "decodeInvoice", { enumerable: true, get: function () { return utils_1.decodeInvoice; } });
     const Theme = components_2.Styles.Theme.ThemeVars;
     let ScomInvoice = class ScomInvoice extends components_2.Module {
+        constructor() {
+            super(...arguments);
+            this.tag = {
+                light: {},
+                dark: {}
+            };
+        }
         init() {
             super.init();
         }
@@ -575,8 +582,11 @@ define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@sco
         }
         viewInvoiceDetail(data) {
             this.pnlInvoice.visible = false;
+            this.lblRecipient.visible = !!data.to;
             const network = this.getNetwork(data.chainId);
             this.lblPaymentFormat.caption = network?.chainName || "";
+            if (data.to)
+                this.lblRecipient.caption = `To ${data.to}`;
             this.pnlFormat.clearInnerHTML();
             if (network.image) {
                 this.pnlFormat.appendChild(this.$render("i-hstack", { horizontalAlignment: "end", gap: "0.25rem" },
@@ -637,6 +647,7 @@ define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@sco
             if (this.expiryInterval)
                 clearInterval(this.expiryInterval);
             this.pnlInvoice.visible = false;
+            this.lblRecipient.visible = false;
             const data = this.extractPaymentAddress(address);
             this.lblPaymentFormat.caption = data.format === 'lightning' ? 'Lightning Invoice' : data.format === 'bitcoin' ? 'On-chain' : 'Unified';
             this.renderPaymentFormatIcons(data.format);
@@ -695,12 +706,13 @@ define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@sco
             return (this.$render("i-panel", { width: "100%", height: "100%" },
                 this.$render("i-vstack", { id: "pnlInvoice", class: index_css_1.invoiceCardStyle, padding: { top: '1.5rem', bottom: '1.5rem', left: '1.5rem', right: '1.5rem' }, border: { radius: '1rem' }, gap: "1rem", visible: false },
                     this.$render("i-hstack", { horizontalAlignment: "space-between", verticalAlignment: "center", lineHeight: "1.125rem", gap: "0.75rem" },
-                        this.$render("i-label", { id: "lblPaymentFormat", font: { size: '1rem' } }),
+                        this.$render("i-label", { id: "lblPaymentFormat", font: { size: '1rem', color: '#fff' } }),
                         this.$render("i-vstack", { id: "pnlFormat", gap: "0.25rem" })),
+                    this.$render("i-label", { id: "lblRecipient", font: { size: '1rem', color: '#fff' }, visible: false }),
                     this.$render("i-hstack", { verticalAlignment: "end", margin: { top: '2.25rem', bottom: '1.25rem' }, lineHeight: "2.75rem", gap: "0.75rem" },
-                        this.$render("i-label", { id: "lblInvoiceAmount", font: { size: '2.25rem' } }),
-                        this.$render("i-label", { id: "lblCurrency", font: { size: '1.25rem', transform: 'capitalize' } })),
-                    this.$render("i-label", { id: "lblDescription", font: { size: '1rem' }, lineHeight: "1.25rem", lineClamp: 2 }),
+                        this.$render("i-label", { id: "lblInvoiceAmount", font: { size: '2.25rem', color: '#fff' } }),
+                        this.$render("i-label", { id: "lblCurrency", font: { size: '1.25rem', transform: 'capitalize', color: '#fff' } })),
+                    this.$render("i-label", { id: "lblDescription", font: { size: '1rem', color: '#fff' }, lineHeight: "1.25rem", lineClamp: 2 }),
                     this.$render("i-button", { id: "btnPay", caption: "Pay", width: "100%", border: { radius: '0.5rem' }, boxShadow: 'none', padding: { top: '0.75rem', bottom: '0.75rem' }, font: { size: '1.125rem', weight: 600 }, onClick: this.payInvoice }))));
         }
     };

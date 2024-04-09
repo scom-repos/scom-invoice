@@ -38,6 +38,7 @@ export default class ScomInvoice extends Module {
     private pnlInvoice: VStack;
     private lblPaymentFormat: Label;
     private pnlFormat: VStack;
+    private lblRecipient: Label;
     private lblInvoiceAmount: Label;
     private lblCurrency: Label;
     private lblDescription: Label;
@@ -45,6 +46,10 @@ export default class ScomInvoice extends Module {
     private _data: IInvoice;
     private expiryInterval: any;
     private networkMap: Record<number, INetwork>;
+    tag: any = {
+      light: {},
+      dark: {}
+    }
     public onPayInvoice: payInvoiceCallback;
 
     init() {
@@ -145,8 +150,10 @@ export default class ScomInvoice extends Module {
 
     private viewInvoiceDetail(data: IInvoice) {
         this.pnlInvoice.visible = false;
+        this.lblRecipient.visible = !!data.to;
         const network = this.getNetwork(data.chainId);
         this.lblPaymentFormat.caption = network?.chainName || "";
+        if (data.to) this.lblRecipient.caption = `To ${data.to}`;
         this.pnlFormat.clearInnerHTML();
         if (network.image) {
             this.pnlFormat.appendChild(
@@ -213,6 +220,7 @@ export default class ScomInvoice extends Module {
     private viewInvoiceByPaymentAddress(address: string) {
         if (this.expiryInterval) clearInterval(this.expiryInterval);
         this.pnlInvoice.visible = false;
+        this.lblRecipient.visible = false;
         const data = this.extractPaymentAddress(address);
         this.lblPaymentFormat.caption = data.format === 'lightning' ? 'Lightning Invoice' : data.format === 'bitcoin' ? 'On-chain' : 'Unified';
         this.renderPaymentFormatIcons(data.format);
@@ -277,14 +285,15 @@ export default class ScomInvoice extends Module {
                     visible={false}
                 >
                     <i-hstack horizontalAlignment="space-between" verticalAlignment="center" lineHeight="1.125rem" gap="0.75rem">
-                        <i-label id="lblPaymentFormat" font={{ size: '1rem' }}></i-label>
+                        <i-label id="lblPaymentFormat" font={{ size: '1rem', color: '#fff' }}></i-label>
                         <i-vstack id="pnlFormat" gap="0.25rem"></i-vstack>
                     </i-hstack>
+                    <i-label id="lblRecipient" font={{ size: '1rem', color: '#fff' }} visible={false}></i-label>
                     <i-hstack verticalAlignment="end" margin={{ top: '2.25rem', bottom: '1.25rem' }} lineHeight="2.75rem" gap="0.75rem">
-                        <i-label id="lblInvoiceAmount" font={{ size: '2.25rem' }}></i-label>
-                        <i-label id="lblCurrency" font={{ size: '1.25rem', transform: 'capitalize' }} ></i-label>
+                        <i-label id="lblInvoiceAmount" font={{ size: '2.25rem', color: '#fff' }}></i-label>
+                        <i-label id="lblCurrency" font={{ size: '1.25rem', transform: 'capitalize', color: '#fff' }} ></i-label>
                     </i-hstack>
-                    <i-label id="lblDescription" font={{ size: '1rem' }} lineHeight="1.25rem" lineClamp={2}></i-label>
+                    <i-label id="lblDescription" font={{ size: '1rem', color: '#fff' }} lineHeight="1.25rem" lineClamp={2}></i-label>
                     <i-button
                         id="btnPay"
                         caption="Pay"
