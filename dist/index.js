@@ -709,9 +709,9 @@ define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@sco
                         this.$render("i-label", { id: "lblPaymentFormat", font: { size: '1rem', color: '#fff' } }),
                         this.$render("i-vstack", { id: "pnlFormat", gap: "0.25rem" })),
                     this.$render("i-label", { id: "lblRecipient", font: { size: '1rem', color: '#fff' }, visible: false }),
-                    this.$render("i-hstack", { verticalAlignment: "end", margin: { top: '2.25rem', bottom: '1.25rem' }, lineHeight: "2.75rem", gap: "0.75rem" },
-                        this.$render("i-label", { id: "lblInvoiceAmount", font: { size: '2.25rem', color: '#fff' } }),
-                        this.$render("i-label", { id: "lblCurrency", font: { size: '1.25rem', transform: 'capitalize', color: '#fff' } })),
+                    this.$render("i-panel", { margin: { top: '2.25rem', bottom: '1.25rem' }, lineHeight: "2.75rem" },
+                        this.$render("i-label", { id: "lblInvoiceAmount", font: { size: '2.25rem', color: '#fff' }, margin: { right: "0.75rem" } }),
+                        this.$render("i-label", { id: "lblCurrency", display: "inline", font: { size: '1.25rem', transform: 'capitalize', color: '#fff' } })),
                     this.$render("i-label", { id: "lblDescription", font: { size: '1rem', color: '#fff' }, lineHeight: "1.25rem", lineClamp: 2 }),
                     this.$render("i-button", { id: "btnPay", caption: "Pay", width: "100%", border: { radius: '0.5rem' }, boxShadow: 'none', padding: { top: '0.75rem', bottom: '0.75rem' }, font: { size: '1.125rem', weight: 600 }, onClick: this.payInvoice }))));
         }

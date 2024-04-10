@@ -289,10 +289,10 @@ export default class ScomInvoice extends Module {
                         <i-vstack id="pnlFormat" gap="0.25rem"></i-vstack>
                     </i-hstack>
                     <i-label id="lblRecipient" font={{ size: '1rem', color: '#fff' }} visible={false}></i-label>
-                    <i-hstack verticalAlignment="end" margin={{ top: '2.25rem', bottom: '1.25rem' }} lineHeight="2.75rem" gap="0.75rem">
-                        <i-label id="lblInvoiceAmount" font={{ size: '2.25rem', color: '#fff' }}></i-label>
-                        <i-label id="lblCurrency" font={{ size: '1.25rem', transform: 'capitalize', color: '#fff' }} ></i-label>
-                    </i-hstack>
+                    <i-panel margin={{ top: '2.25rem', bottom: '1.25rem' }} lineHeight="2.75rem">
+                        <i-label id="lblInvoiceAmount" font={{ size: '2.25rem', color: '#fff' }} margin={{ right: "0.75rem" }}></i-label>
+                        <i-label id="lblCurrency" display="inline" font={{ size: '1.25rem', transform: 'capitalize', color: '#fff' }} ></i-label>
+                    </i-panel>
                     <i-label id="lblDescription" font={{ size: '1rem', color: '#fff' }} lineHeight="1.25rem" lineClamp={2}></i-label>
                     <i-button
                         id="btnPay"
