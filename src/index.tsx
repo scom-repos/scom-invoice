@@ -162,7 +162,7 @@ export default class ScomInvoice extends Module {
                 </i-hstack>
             )
         }
-        this.lblInvoiceAmount.caption = FormatUtils.formatNumber(data.amount, { decimalFigures: 0 });
+        this.lblInvoiceAmount.caption = FormatUtils.formatNumber(data.amount, { decimalFigures: 6, hasTrailingZero: false });
         this.lblCurrency.caption = data.token.symbol;
         this.lblDescription.caption = data.comment || '';
         let status: InvoiceStatus = 'unpaid';

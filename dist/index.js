@@ -592,7 +592,7 @@ define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@sco
                 this.pnlFormat.appendChild(this.$render("i-hstack", { horizontalAlignment: "end", gap: "0.25rem" },
                     this.$render("i-image", { width: "1.5rem", height: "1.5rem", url: network.image })));
             }
-            this.lblInvoiceAmount.caption = components_2.FormatUtils.formatNumber(data.amount, { decimalFigures: 0 });
+            this.lblInvoiceAmount.caption = components_2.FormatUtils.formatNumber(data.amount, { decimalFigures: 6, hasTrailingZero: false });
             this.lblCurrency.caption = data.token.symbol;
             this.lblDescription.caption = data.comment || '';
             let status = 'unpaid';
