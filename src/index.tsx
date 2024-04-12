@@ -4,6 +4,8 @@ import {
     customElements,
     FormatUtils,
     HStack,
+    Icon,
+    Image,
     Label,
     Module,
     Styles,
@@ -36,7 +38,8 @@ declare global {
 export default class ScomInvoice extends Module {
     private pnlInvoice: VStack;
     private lblPaymentFormat: Label;
-    private pnlFormat: VStack;
+    private imgNetwork: Image;
+    private iconNetwork: Icon;
     private lblRecipient: Label;
     private lblInvoiceAmount: Label;
     private lblCurrency: Label;
@@ -167,14 +170,11 @@ export default class ScomInvoice extends Module {
         const network = this.getNetwork(data.chainId);
         this.lblPaymentFormat.caption = network?.chainName || "";
         if (data.to) this.lblRecipient.caption = `To ${data.to}`;
-        this.pnlFormat.clearInnerHTML();
         if (network.image) {
-            this.pnlFormat.appendChild(
-                <i-hstack horizontalAlignment="end" gap="0.25rem">
-                    <i-image width="1.5rem" height="1.5rem" url={network.image}></i-image>
-                </i-hstack>
-            )
+            this.imgNetwork.url = network.image;
         }
+        this.imgNetwork.visible = !!network.image;
+        this.iconNetwork.visible = false;
         this.lblInvoiceAmount.caption = FormatUtils.formatNumber(data.amount, { decimalFigures: 6, hasTrailingZero: false });
         this.lblCurrency.caption = data.token.symbol;
         this.lblDescription.caption = data.comment || '';
@@ -195,39 +195,18 @@ export default class ScomInvoice extends Module {
         }
     }
 
-    private renderPaymentFormatIcons(format: PaymentFormatType) {
-        this.pnlFormat.clearInnerHTML();
-        const icons = [];
-        if (format !== 'lightning') {
-            icons.push('link');
-        }
-        if (format !== 'bitcoin') {
-            icons.push('bolt');
-        }
-        const pnlIcons: HStack = (<i-hstack horizontalAlignment="end" gap="0.25rem"></i-hstack>);
-        this.pnlFormat.appendChild(pnlIcons);
-        for (const name of icons) {
-            pnlIcons.appendChild(
-                <i-icon width="1rem" height="1rem" name={name}></i-icon>
-            )
-        }
-    }
-
     private updateInvoiceStatus(status: InvoiceStatus) {
+        let text;
         if (status === InvoiceStatus.Expired) {
-            this.btnPay.caption = "Expired";
-            this.btnPay.enabled = false;
-            this.pnlInvoice.enabled = false;
+            text = "Expired";
+        } else if (status === InvoiceStatus.Paid) {
+            text = "Paid";
         } else {
-            if (status === InvoiceStatus.Paid) {
-                this.btnPay.caption = "Paid";
-                this.btnPay.enabled = false;
-            } else {
-                this.btnPay.caption = "Pay";
-                this.btnPay.enabled = true;
-            }
-            this.pnlInvoice.enabled = true;
+            text = "Pay";
         }
+        this.btnPay.caption = text;
+        this.btnPay.enabled = status === InvoiceStatus.Unpaid;
+        this.pnlInvoice.enabled = status !== InvoiceStatus.Expired;
     }
 
     private viewInvoiceByPaymentAddress(address: string) {
@@ -235,8 +214,10 @@ export default class ScomInvoice extends Module {
         this.pnlInvoice.visible = false;
         this.lblRecipient.visible = false;
         const data = this.extractPaymentAddress(address);
-        this.lblPaymentFormat.caption = data.format === 'lightning' ? 'Lightning Invoice' : data.format === 'bitcoin' ? 'On-chain' : 'Unified';
-        this.renderPaymentFormatIcons(data.format);
+        this.lblPaymentFormat.caption = 'Lightning Invoice';
+        this.iconNetwork.name = 'bolt';
+        this.iconNetwork.visible = true;
+        this.imgNetwork.visible = false;
         this.lblInvoiceAmount.caption = FormatUtils.formatNumber(data.satoshis, { decimalFigures: 0 });
         this.lblCurrency.caption = 'Sats';
         this.lblDescription.caption = data.description || '';
@@ -301,7 +282,12 @@ export default class ScomInvoice extends Module {
                 >
                     <i-hstack horizontalAlignment="space-between" verticalAlignment="center" lineHeight="1.125rem" gap="0.75rem">
                         <i-label id="lblPaymentFormat" font={{ size: '1rem', color: '#fff' }}></i-label>
-                        <i-vstack id="pnlFormat" gap="0.25rem"></i-vstack>
+                        <i-vstack gap="0.25rem">
+                            <i-hstack horizontalAlignment="end" gap="0.25rem">
+                                <i-image id="imgNetwork" width="1.5rem" height="1.5rem" visible={false}></i-image>
+                                <i-icon id="iconNetwork" width="1rem" height="1rem" visible={false}></i-icon>
+                            </i-hstack>
+                        </i-vstack>
                     </i-hstack>
                     <i-label id="lblRecipient" font={{ size: '1rem', color: '#fff' }} visible={false}></i-label>
                     <i-panel margin={{ top: '2.25rem', bottom: '1.25rem' }} lineHeight="2.75rem">

@@ -1,12 +1,13 @@
 import { Module, customModule, Container } from '@ijstech/components';
-import ScomInvoice from '@scom/scom-invoice';
+import ScomInvoice, { InvoiceStatus } from '@scom/scom-invoice';
 
 const invoiceData = {
     chainId: 43113,
     token: { name: "AVAX", decimals: 18, symbol: "AVAX" },
     amount: 1,
     comment: "Testing",
-    to: "0x9C6c3A26f8D1277A86BFFC86335e625e39106C04"
+    to: "0x9C6c3A26f8D1277A86BFFC86335e625e39106C04",
+    status: InvoiceStatus.Paid
 };
 const paymentAddress = 'lnbc2500u1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq5xysxxatsyp3k7enxv4jsxqzpu9qrsgquk0rl77nj30yxdy8j9vdx85fkpmdla2087ne0xh8nhedh8w27kyke0lp53ut353s06fv3qfegext0eh0ymjpf39tuven09sam30g4vgpfna3rh';
 

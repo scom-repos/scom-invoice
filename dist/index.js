@@ -601,11 +601,11 @@ define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@sco
             this.lblPaymentFormat.caption = network?.chainName || "";
             if (data.to)
                 this.lblRecipient.caption = `To ${data.to}`;
-            this.pnlFormat.clearInnerHTML();
             if (network.image) {
-                this.pnlFormat.appendChild(this.$render("i-hstack", { horizontalAlignment: "end", gap: "0.25rem" },
-                    this.$render("i-image", { width: "1.5rem", height: "1.5rem", url: network.image })));
+                this.imgNetwork.url = network.image;
             }
+            this.imgNetwork.visible = !!network.image;
+            this.iconNetwork.visible = false;
             this.lblInvoiceAmount.caption = components_2.FormatUtils.formatNumber(data.amount, { decimalFigures: 6, hasTrailingZero: false });
             this.lblCurrency.caption = data.token.symbol;
             this.lblDescription.caption = data.comment || '';
@@ -624,38 +624,20 @@ define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@sco
                 return { ...data, format, expiry, description };
             }
         }
-        renderPaymentFormatIcons(format) {
-            this.pnlFormat.clearInnerHTML();
-            const icons = [];
-            if (format !== 'lightning') {
-                icons.push('link');
-            }
-            if (format !== 'bitcoin') {
-                icons.push('bolt');
-            }
-            const pnlIcons = (this.$render("i-hstack", { horizontalAlignment: "end", gap: "0.25rem" }));
-            this.pnlFormat.appendChild(pnlIcons);
-            for (const name of icons) {
-                pnlIcons.appendChild(this.$render("i-icon", { width: "1rem", height: "1rem", name: name }));
-            }
-        }
         updateInvoiceStatus(status) {
+            let text;
             if (status === "expired" /* InvoiceStatus.Expired */) {
-                this.btnPay.caption = "Expired";
-                this.btnPay.enabled = false;
-                this.pnlInvoice.enabled = false;
+                text = "Expired";
+            }
+            else if (status === "paid" /* InvoiceStatus.Paid */) {
+                text = "Paid";
             }
             else {
-                if (status === "paid" /* InvoiceStatus.Paid */) {
-                    this.btnPay.caption = "Paid";
-                    this.btnPay.enabled = false;
-                }
-                else {
-                    this.btnPay.caption = "Pay";
-                    this.btnPay.enabled = true;
-                }
-                this.pnlInvoice.enabled = true;
+                text = "Pay";
             }
+            this.btnPay.caption = text;
+            this.btnPay.enabled = status === "unpaid" /* InvoiceStatus.Unpaid */;
+            this.pnlInvoice.enabled = status !== "expired" /* InvoiceStatus.Expired */;
         }
         viewInvoiceByPaymentAddress(address) {
             if (this.expiryInterval)
@@ -663,8 +645,10 @@ define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@sco
             this.pnlInvoice.visible = false;
             this.lblRecipient.visible = false;
             const data = this.extractPaymentAddress(address);
-            this.lblPaymentFormat.caption = data.format === 'lightning' ? 'Lightning Invoice' : data.format === 'bitcoin' ? 'On-chain' : 'Unified';
-            this.renderPaymentFormatIcons(data.format);
+            this.lblPaymentFormat.caption = 'Lightning Invoice';
+            this.iconNetwork.name = 'bolt';
+            this.iconNetwork.visible = true;
+            this.imgNetwork.visible = false;
             this.lblInvoiceAmount.caption = components_2.FormatUtils.formatNumber(data.satoshis, { decimalFigures: 0 });
             this.lblCurrency.caption = 'Sats';
             this.lblDescription.caption = data.description || '';
@@ -723,7 +707,10 @@ define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@sco
                 this.$render("i-vstack", { id: "pnlInvoice", class: index_css_1.invoiceCardStyle, padding: { top: '1.5rem', bottom: '1.5rem', left: '1.5rem', right: '1.5rem' }, border: { radius: '1rem' }, gap: "1rem", visible: false },
                     this.$render("i-hstack", { horizontalAlignment: "space-between", verticalAlignment: "center", lineHeight: "1.125rem", gap: "0.75rem" },
                         this.$render("i-label", { id: "lblPaymentFormat", font: { size: '1rem', color: '#fff' } }),
-                        this.$render("i-vstack", { id: "pnlFormat", gap: "0.25rem" })),
+                        this.$render("i-vstack", { gap: "0.25rem" },
+                            this.$render("i-hstack", { horizontalAlignment: "end", gap: "0.25rem" },
+                                this.$render("i-image", { id: "imgNetwork", width: "1.5rem", height: "1.5rem", visible: false }),
+                                this.$render("i-icon", { id: "iconNetwork", width: "1rem", height: "1rem", visible: false })))),
                     this.$render("i-label", { id: "lblRecipient", font: { size: '1rem', color: '#fff' }, visible: false }),
                     this.$render("i-panel", { margin: { top: '2.25rem', bottom: '1.25rem' }, lineHeight: "2.75rem" },
                         this.$render("i-label", { id: "lblInvoiceAmount", font: { size: '2.25rem', color: '#fff' }, margin: { right: "0.75rem" } }),

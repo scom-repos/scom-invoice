@@ -95,7 +95,8 @@ declare module "@scom/scom-invoice" {
     export default class ScomInvoice extends Module {
         private pnlInvoice;
         private lblPaymentFormat;
-        private pnlFormat;
+        private imgNetwork;
+        private iconNetwork;
         private lblRecipient;
         private lblInvoiceAmount;
         private lblCurrency;
@@ -129,7 +130,6 @@ declare module "@scom/scom-invoice" {
         private getNetwork;
         private viewInvoiceDetail;
         private extractPaymentAddress;
-        private renderPaymentFormatIcons;
         private updateInvoiceStatus;
         private viewInvoiceByPaymentAddress;
         private payInvoice;
