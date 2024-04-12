@@ -65,6 +65,7 @@ export default class ScomInvoice extends Module {
             status = InvoiceStatus.Paid;
             this.updateInvoiceStatus(status);
             this.btnPay.tag.status = status;
+            if (this.expiryInterval) clearInterval(this.expiryInterval);
         }
     }
 

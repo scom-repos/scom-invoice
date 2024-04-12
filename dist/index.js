@@ -507,6 +507,8 @@ define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@sco
                 status = "paid" /* InvoiceStatus.Paid */;
                 this.updateInvoiceStatus(status);
                 this.btnPay.tag.status = status;
+                if (this.expiryInterval)
+                    clearInterval(this.expiryInterval);
             }
         }
         async setData(value) {
