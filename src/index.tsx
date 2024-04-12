@@ -11,14 +11,13 @@ import {
 } from '@ijstech/components';
 import { INetwork } from "@ijstech/eth-wallet";
 import getNetworkList from '@scom/scom-network-list';
-import { IInvoice, modeType, PaymentFormatType, sendBillCallback } from './interface';
+import { IInvoice, InvoiceStatus, PaymentFormatType } from './interface';
 import { invoiceCardStyle } from './index.css';
 import { decodeInvoice } from './utils';
-export { decodeInvoice, IInvoice };
+export { decodeInvoice, IInvoice, InvoiceStatus };
 
 const Theme = Styles.Theme.ThemeVars;
 
-type InvoiceStatus = 'expired' | 'paid' | 'unpaid';
 type payInvoiceCallback = (data: IInvoice) => Promise<boolean>;
 
 interface ScomInvoiceElement extends ControlElement {
@@ -54,6 +53,19 @@ export default class ScomInvoice extends Module {
 
     init() {
         super.init();
+    }
+
+    get isPaid() {
+        return this.btnPay.tag?.status === InvoiceStatus.Paid;
+    }
+
+    set isPaid(value: boolean) {
+        let status: InvoiceStatus;
+        if (value) {
+            status = InvoiceStatus.Paid;
+            this.updateInvoiceStatus(status);
+            this.btnPay.tag.status = status;
+        }
     }
 
     private async setData(value: IInvoice) {
@@ -165,7 +177,7 @@ export default class ScomInvoice extends Module {
         this.lblInvoiceAmount.caption = FormatUtils.formatNumber(data.amount, { decimalFigures: 6, hasTrailingZero: false });
         this.lblCurrency.caption = data.token.symbol;
         this.lblDescription.caption = data.comment || '';
-        let status: InvoiceStatus = 'unpaid';
+        let status: InvoiceStatus = data.status || InvoiceStatus.Unpaid;
         this.updateInvoiceStatus(status);
         this.btnPay.tag = { ...data, status };
         this.pnlInvoice.visible = true;
@@ -201,12 +213,12 @@ export default class ScomInvoice extends Module {
     }
 
     private updateInvoiceStatus(status: InvoiceStatus) {
-        if (status === 'expired') {
+        if (status === InvoiceStatus.Expired) {
             this.btnPay.caption = "Expired";
             this.btnPay.enabled = false;
             this.pnlInvoice.enabled = false;
         } else {
-            if (status === 'paid') {
+            if (status === InvoiceStatus.Paid) {
                 this.btnPay.caption = "Paid";
                 this.btnPay.enabled = false;
             } else {
@@ -228,18 +240,20 @@ export default class ScomInvoice extends Module {
         this.lblCurrency.caption = 'Sats';
         this.lblDescription.caption = data.description || '';
         let expiryDate = new Date((data.timestamp + data.expiry) * 1000);
-        let status: InvoiceStatus = 'unpaid';
-        if (Date.now() < expiryDate.getTime()) {
-            this.expiryInterval = setInterval(() => {
-                if (Date.now() >= expiryDate.getTime()) {
-                    clearInterval(this.expiryInterval);
-                    status = 'expired';
-                    this.updateInvoiceStatus(status);
-                    this.btnPay.tag = { ...data, status };
-                }
-            }, 30000);
-        } else {
-            status = 'expired';
+        let status: InvoiceStatus = this._data.status || InvoiceStatus.Unpaid;
+        if (status === 'unpaid') {
+            if (Date.now() < expiryDate.getTime()) {
+                this.expiryInterval = setInterval(() => {
+                    if (Date.now() >= expiryDate.getTime()) {
+                        clearInterval(this.expiryInterval);
+                        status = InvoiceStatus.Expired;
+                        this.updateInvoiceStatus(status);
+                        this.btnPay.tag = { ...data, status };
+                    }
+                }, 30000);
+            } else {
+                status = InvoiceStatus.Expired;
+            }
         }
         this.updateInvoiceStatus(status);
         this.btnPay.tag = { ...data, status };
@@ -254,18 +268,18 @@ export default class ScomInvoice extends Module {
         if (data.timestamp != null && data.expiry != null) {
             let expiryDate = new Date((data.timestamp + data.expiry) * 1000);
             if (Date.now() >= expiryDate.getTime()) {
-                status = 'expired';
+                status = InvoiceStatus.Expired;
                 this.updateInvoiceStatus(status);
                 this.btnPay.tag = { ...data, status };
                 return;
             }
         }
-        status = 'paid';
+        status = InvoiceStatus.Paid;
         if (this.onPayInvoice) {
             this.btnPay.rightIcon.spin = true;
             this.btnPay.rightIcon.visible = true;
             let success = await this.onPayInvoice(this._data);
-            if (!success) status = 'unpaid';
+            if (!success) status = InvoiceStatus.Unpaid;
             this.btnPay.rightIcon.spin = false;
             this.btnPay.rightIcon.visible = false;
         }

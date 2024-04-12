@@ -1,8 +1,11 @@
 /// <amd-module name="@scom/scom-invoice/interface.ts" />
 declare module "@scom/scom-invoice/interface.ts" {
-    export type sendBillCallback = (data: IInvoice) => void;
-    export type modeType = 'create' | 'view';
     export type PaymentFormatType = 'unified' | 'lightning' | 'bitcoin';
+    export const enum InvoiceStatus {
+        Expired = "expired",
+        Paid = "paid",
+        Unpaid = "unpaid"
+    }
     interface ITokenObject {
         address?: string;
         name: string;
@@ -16,6 +19,7 @@ declare module "@scom/scom-invoice/interface.ts" {
         comment?: string;
         token?: ITokenObject;
         paymentAddress?: string;
+        status?: InvoiceStatus;
     }
     export interface IItem {
         name: string;
@@ -74,9 +78,9 @@ declare module "@scom/scom-invoice/utils/index.ts" {
 /// <amd-module name="@scom/scom-invoice" />
 declare module "@scom/scom-invoice" {
     import { ControlElement, Module } from '@ijstech/components';
-    import { IInvoice } from "@scom/scom-invoice/interface.ts";
+    import { IInvoice, InvoiceStatus } from "@scom/scom-invoice/interface.ts";
     import { decodeInvoice } from "@scom/scom-invoice/utils/index.ts";
-    export { decodeInvoice, IInvoice };
+    export { decodeInvoice, IInvoice, InvoiceStatus };
     type payInvoiceCallback = (data: IInvoice) => Promise<boolean>;
     interface ScomInvoiceElement extends ControlElement {
         onPayInvoice?: payInvoiceCallback;
@@ -103,6 +107,8 @@ declare module "@scom/scom-invoice" {
         tag: any;
         onPayInvoice: payInvoiceCallback;
         init(): void;
+        get isPaid(): boolean;
+        set isPaid(value: boolean);
         private setData;
         private getData;
         getConfigurators(): {

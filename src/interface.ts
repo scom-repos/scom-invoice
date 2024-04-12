@@ -1,6 +1,9 @@
-export type sendBillCallback = (data: IInvoice) => void;
-export type modeType = 'create' | 'view';
 export type PaymentFormatType = 'unified' | 'lightning' | 'bitcoin';
+export const enum InvoiceStatus {
+    Expired = 'expired',
+    Paid = 'paid',
+    Unpaid = 'unpaid'
+};
 
 interface ITokenObject {
     address?: string;
@@ -16,6 +19,7 @@ export interface IInvoice {
     comment?: string;
     token?: ITokenObject;
     paymentAddress?: string;
+    status?: InvoiceStatus;
 }
 export interface IItem {
     name: string;
