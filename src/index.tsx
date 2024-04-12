@@ -71,10 +71,10 @@ export default class ScomInvoice extends Module {
 
     private async setData(value: IInvoice) {
         this._data = value;
-        if (value.paymentAddress) {
-            this.viewInvoiceByPaymentAddress(value.paymentAddress);
-        } else {
+        if (value.chainId) {
             this.viewInvoiceDetail(this._data);
+        } else {
+            this.viewInvoiceByPaymentAddress(value.paymentAddress);
         }
     }
 

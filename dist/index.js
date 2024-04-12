@@ -513,11 +513,11 @@ define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@sco
         }
         async setData(value) {
             this._data = value;
-            if (value.paymentAddress) {
-                this.viewInvoiceByPaymentAddress(value.paymentAddress);
+            if (value.chainId) {
+                this.viewInvoiceDetail(this._data);
             }
             else {
-                this.viewInvoiceDetail(this._data);
+                this.viewInvoiceByPaymentAddress(value.paymentAddress);
             }
         }
         getData() {
