@@ -20,6 +20,7 @@ export interface IInvoice {
     token?: ITokenObject;
     paymentAddress?: string;
     status?: InvoiceStatus;
+    tx?: string;
 }
 export interface IItem {
     name: string;

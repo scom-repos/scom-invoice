@@ -20,6 +20,7 @@ declare module "@scom/scom-invoice/interface.ts" {
         token?: ITokenObject;
         paymentAddress?: string;
         status?: InvoiceStatus;
+        tx?: string;
     }
     export interface IItem {
         name: string;
@@ -81,7 +82,10 @@ declare module "@scom/scom-invoice" {
     import { IInvoice, InvoiceStatus } from "@scom/scom-invoice/interface.ts";
     import { decodeInvoice } from "@scom/scom-invoice/utils/index.ts";
     export { decodeInvoice, IInvoice, InvoiceStatus };
-    type payInvoiceCallback = (data: IInvoice) => Promise<boolean>;
+    type payInvoiceCallback = (data: IInvoice) => Promise<{
+        success: boolean;
+        tx?: string;
+    }>;
     interface ScomInvoiceElement extends ControlElement {
         onPayInvoice?: payInvoiceCallback;
     }
@@ -101,6 +105,7 @@ declare module "@scom/scom-invoice" {
         private lblInvoiceAmount;
         private lblCurrency;
         private lblDescription;
+        private lblTransaction;
         private btnPay;
         private _data;
         private expiryInterval;
@@ -110,6 +115,8 @@ declare module "@scom/scom-invoice" {
         init(): void;
         get isPaid(): boolean;
         set isPaid(value: boolean);
+        get tx(): string;
+        set tx(value: string);
         private setData;
         private getData;
         getConfigurators(): {
@@ -128,6 +135,7 @@ declare module "@scom/scom-invoice" {
         private updateStyle;
         private updateTheme;
         private getNetwork;
+        private getExplorerUrlByTransactionId;
         private viewInvoiceDetail;
         private extractPaymentAddress;
         private updateInvoiceStatus;

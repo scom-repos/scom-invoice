@@ -511,6 +511,19 @@ define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@sco
                     clearInterval(this.expiryInterval);
             }
         }
+        get tx() {
+            return this._data.tx;
+        }
+        set tx(value) {
+            this._data.tx = value;
+            if (this._data.chainId && value) {
+                this.lblTransaction.link.href = this.getExplorerUrlByTransactionId(this._data.chainId, value);
+                this.lblTransaction.visible = true;
+            }
+            else {
+                this.lblTransaction.visible = false;
+            }
+        }
         async setData(value) {
             this._data = value;
             if (value.chainId) {
@@ -594,6 +607,16 @@ define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@sco
             }
             return this.networkMap[chainId];
         }
+        getExplorerUrlByTransactionId(chainId, tx) {
+            let url = "";
+            const network = this.getNetwork(chainId);
+            const explorerUrl = network.blockExplorerUrls && network.blockExplorerUrls.length ? network.blockExplorerUrls[0] : "";
+            const explorerTxUrl = explorerUrl ? `${explorerUrl}${explorerUrl.endsWith("/") ? "" : "/"}tx/` : "";
+            if (network && explorerTxUrl) {
+                url = `${explorerTxUrl}${tx}`;
+            }
+            return url;
+        }
         viewInvoiceDetail(data) {
             this.pnlInvoice.visible = false;
             this.lblRecipient.visible = !!data.to;
@@ -609,6 +632,14 @@ define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@sco
             this.lblInvoiceAmount.caption = components_2.FormatUtils.formatNumber(data.amount, { decimalFigures: 6, hasTrailingZero: false });
             this.lblCurrency.caption = data.token.symbol;
             this.lblDescription.caption = data.comment || '';
+            this.lblDescription.visible = !!data.comment;
+            if (data.tx) {
+                this.lblTransaction.link.href = this.getExplorerUrlByTransactionId(data.chainId, data.tx);
+                this.lblTransaction.visible = true;
+            }
+            else {
+                this.lblTransaction.visible = false;
+            }
             let status = data.status || "unpaid" /* InvoiceStatus.Unpaid */;
             this.updateInvoiceStatus(status);
             this.btnPay.tag = { ...data, status };
@@ -644,6 +675,7 @@ define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@sco
                 clearInterval(this.expiryInterval);
             this.pnlInvoice.visible = false;
             this.lblRecipient.visible = false;
+            this.lblTransaction.visible = false;
             const data = this.extractPaymentAddress(address);
             this.lblPaymentFormat.caption = 'Lightning Invoice';
             this.iconNetwork.name = 'bolt';
@@ -652,6 +684,7 @@ define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@sco
             this.lblInvoiceAmount.caption = components_2.FormatUtils.formatNumber(data.satoshis, { decimalFigures: 0 });
             this.lblCurrency.caption = 'Sats';
             this.lblDescription.caption = data.description || '';
+            this.lblDescription.visible = !!data.description;
             let expiryDate = new Date((data.timestamp + data.expiry) * 1000);
             let status = this._data.status || "unpaid" /* InvoiceStatus.Unpaid */;
             if (status === 'unpaid') {
@@ -693,9 +726,11 @@ define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@sco
             if (this.onPayInvoice) {
                 this.btnPay.rightIcon.spin = true;
                 this.btnPay.rightIcon.visible = true;
-                let success = await this.onPayInvoice(this._data);
-                if (!success)
+                let result = await this.onPayInvoice(this._data);
+                if (!result.success)
                     status = "unpaid" /* InvoiceStatus.Unpaid */;
+                if (result.tx)
+                    this.tx = result.tx;
                 this.btnPay.rightIcon.spin = false;
                 this.btnPay.rightIcon.visible = false;
             }
@@ -715,7 +750,8 @@ define("@scom/scom-invoice", ["require", "exports", "@ijstech/components", "@sco
                     this.$render("i-panel", { margin: { top: '2.25rem', bottom: '1.25rem' }, lineHeight: "2.75rem" },
                         this.$render("i-label", { id: "lblInvoiceAmount", font: { size: '2.25rem', color: '#fff' }, margin: { right: "0.75rem" } }),
                         this.$render("i-label", { id: "lblCurrency", display: "inline", font: { size: '1.25rem', transform: 'capitalize', color: '#fff' } })),
-                    this.$render("i-label", { id: "lblDescription", font: { size: '1rem', color: '#fff' }, lineHeight: "1.25rem", lineClamp: 2 }),
+                    this.$render("i-label", { id: "lblDescription", font: { size: '1rem', color: '#fff' }, lineHeight: "1.25rem", lineClamp: 2, visible: false }),
+                    this.$render("i-label", { id: "lblTransaction", caption: "View on block explorer", font: { size: '0.875rem', color: '#FE9F10' }, visible: false }),
                     this.$render("i-button", { id: "btnPay", caption: "Pay", width: "100%", border: { radius: '0.5rem' }, boxShadow: 'none', padding: { top: '0.75rem', bottom: '0.75rem' }, font: { size: '1.125rem', weight: 600 }, onClick: this.payInvoice }))));
         }
     };

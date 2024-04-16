@@ -20,7 +20,7 @@ export { decodeInvoice, IInvoice, InvoiceStatus };
 
 const Theme = Styles.Theme.ThemeVars;
 
-type payInvoiceCallback = (data: IInvoice) => Promise<boolean>;
+type payInvoiceCallback = (data: IInvoice) => Promise<{ success: boolean; tx?: string }>;
 
 interface ScomInvoiceElement extends ControlElement {
     onPayInvoice?: payInvoiceCallback;
@@ -44,6 +44,7 @@ export default class ScomInvoice extends Module {
     private lblInvoiceAmount: Label;
     private lblCurrency: Label;
     private lblDescription: Label;
+    private lblTransaction: Label;
     private btnPay: Button;
     private _data: IInvoice;
     private expiryInterval: any;
@@ -69,6 +70,20 @@ export default class ScomInvoice extends Module {
             this.updateInvoiceStatus(status);
             this.btnPay.tag.status = status;
             if (this.expiryInterval) clearInterval(this.expiryInterval);
+        }
+    }
+
+    get tx() {
+        return this._data.tx;
+    }
+
+    set tx(value: string) {
+        this._data.tx = value;
+        if (this._data.chainId && value) {
+            this.lblTransaction.link.href = this.getExplorerUrlByTransactionId(this._data.chainId, value);
+            this.lblTransaction.visible = true;
+        } else {
+            this.lblTransaction.visible = false;
         }
     }
 
@@ -164,6 +179,17 @@ export default class ScomInvoice extends Module {
         return this.networkMap[chainId];
     }
 
+    private getExplorerUrlByTransactionId(chainId: number, tx: string) {
+        let url = "";
+        const network = this.getNetwork(chainId);
+        const explorerUrl = network.blockExplorerUrls && network.blockExplorerUrls.length ? network.blockExplorerUrls[0] : "";
+        const explorerTxUrl = explorerUrl ? `${explorerUrl}${explorerUrl.endsWith("/") ? "" : "/"}tx/` : "";
+        if (network && explorerTxUrl) {
+            url = `${explorerTxUrl}${tx}`;
+        }
+        return url;
+    }
+
     private viewInvoiceDetail(data: IInvoice) {
         this.pnlInvoice.visible = false;
         this.lblRecipient.visible = !!data.to;
@@ -178,6 +204,13 @@ export default class ScomInvoice extends Module {
         this.lblInvoiceAmount.caption = FormatUtils.formatNumber(data.amount, { decimalFigures: 6, hasTrailingZero: false });
         this.lblCurrency.caption = data.token.symbol;
         this.lblDescription.caption = data.comment || '';
+        this.lblDescription.visible = !!data.comment;
+        if (data.tx) {
+            this.lblTransaction.link.href = this.getExplorerUrlByTransactionId(data.chainId, data.tx);
+            this.lblTransaction.visible = true;
+        } else {
+            this.lblTransaction.visible = false;
+        }
         let status: InvoiceStatus = data.status || InvoiceStatus.Unpaid;
         this.updateInvoiceStatus(status);
         this.btnPay.tag = { ...data, status };
@@ -213,6 +246,7 @@ export default class ScomInvoice extends Module {
         if (this.expiryInterval) clearInterval(this.expiryInterval);
         this.pnlInvoice.visible = false;
         this.lblRecipient.visible = false;
+        this.lblTransaction.visible = false;
         const data = this.extractPaymentAddress(address);
         this.lblPaymentFormat.caption = 'Lightning Invoice';
         this.iconNetwork.name = 'bolt';
@@ -221,6 +255,7 @@ export default class ScomInvoice extends Module {
         this.lblInvoiceAmount.caption = FormatUtils.formatNumber(data.satoshis, { decimalFigures: 0 });
         this.lblCurrency.caption = 'Sats';
         this.lblDescription.caption = data.description || '';
+        this.lblDescription.visible = !!data.description;
         let expiryDate = new Date((data.timestamp + data.expiry) * 1000);
         let status: InvoiceStatus = this._data.status || InvoiceStatus.Unpaid;
         if (status === 'unpaid') {
@@ -260,8 +295,9 @@ export default class ScomInvoice extends Module {
         if (this.onPayInvoice) {
             this.btnPay.rightIcon.spin = true;
             this.btnPay.rightIcon.visible = true;
-            let success = await this.onPayInvoice(this._data);
-            if (!success) status = InvoiceStatus.Unpaid;
+            let result = await this.onPayInvoice(this._data);
+            if (!result.success) status = InvoiceStatus.Unpaid;
+            if (result.tx) this.tx = result.tx;
             this.btnPay.rightIcon.spin = false;
             this.btnPay.rightIcon.visible = false;
         }
@@ -294,7 +330,8 @@ export default class ScomInvoice extends Module {
                         <i-label id="lblInvoiceAmount" font={{ size: '2.25rem', color: '#fff' }} margin={{ right: "0.75rem" }}></i-label>
                         <i-label id="lblCurrency" display="inline" font={{ size: '1.25rem', transform: 'capitalize', color: '#fff' }} ></i-label>
                     </i-panel>
-                    <i-label id="lblDescription" font={{ size: '1rem', color: '#fff' }} lineHeight="1.25rem" lineClamp={2}></i-label>
+                    <i-label id="lblDescription" font={{ size: '1rem', color: '#fff' }} lineHeight="1.25rem" lineClamp={2} visible={false}></i-label>
+                    <i-label id="lblTransaction" caption="View on block explorer" font={{ size: '0.875rem', color: '#FE9F10' }} visible={false}></i-label>
                     <i-button
                         id="btnPay"
                         caption="Pay"
